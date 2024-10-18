@@ -1,14 +1,13 @@
-# ESPAsyncWebServer [![Build Status](https://travis-ci.org/me-no-dev/ESPAsyncWebServer.svg?branch=master)](https://travis-ci.org/me-no-dev/ESPAsyncWebServer)
+# ESPAsyncWebServer 
 
-For help and support [![Join the chat at https://gitter.im/me-no-dev/ESPAsyncWebServer](https://badges.gitter.im/me-no-dev/ESPAsyncWebServer.svg)](https://gitter.im/me-no-dev/ESPAsyncWebServer?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+Fork Async HTTP and WebSocket Server for ESP8266 Arduino
 
-Async HTTP and WebSocket Server for ESP8266 Arduino
+For ESP8266 it requires [ESPAsyncTCP](https://github.com/espsomo/ESPAsyncTCP)
 
-For ESP8266 it requires [ESPAsyncTCP](https://github.com/me-no-dev/ESPAsyncTCP)
-To use this library you might need to have the latest git versions of [ESP8266](https://github.com/esp8266/Arduino) Arduino Core
+To use this library you might need to have the git versions of [ESP8266](https://github.com/esp8266/Arduino) Arduino Core v2.6.3
 
-For ESP32 it requires [AsyncTCP](https://github.com/me-no-dev/AsyncTCP) to work
-To use this library you might need to have the latest git versions of [ESP32](https://github.com/espressif/arduino-esp32) Arduino Core
+For ESP32 it requires [AsyncTCP](https://github.com/espsomo/AsyncTCP) to work
+To use this library you might need to have the git versions of [ESP32](https://github.com/espsomo/arduino-esp32) Arduino Core v2.0.10
 
 ## Table of contents
 - [ESPAsyncWebServer](#espasyncwebserver)
