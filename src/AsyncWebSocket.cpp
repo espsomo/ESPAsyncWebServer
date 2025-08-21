@@ -837,7 +837,8 @@ IPAddress AsyncWebSocketClient::remoteIP() {
 #ifdef ESP8266      
       return IPAddress(0U);
 #else
-      return IPAddress("0.0.0.0");  
+      //return IPAddress("0.0.0.0");
+      return IPAddress((uint8_t)0);
 #endif      
     }
     return _client->remoteIP();
