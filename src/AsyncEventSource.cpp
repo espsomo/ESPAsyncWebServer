@@ -24,21 +24,21 @@ static String generateEventMessage(const char* message, const char* event, uint3
   String ev = "";
 
   if (reconnect) {
-    ev += "retry: ";
+    ev += F("retry: ");
     ev += String(reconnect);
-    ev += "\r\n";
+    ev += F("\r\n");
   }
 
   if (id) {
-    ev += "id: ";
+    ev += F("id: ");
     ev += String(id);
-    ev += "\r\n";
+    ev += F("\r\n");
   }
 
   if (event != nullptr) {
-    ev += "event: ";
+    ev += F("event: ");
     ev += String(event);
-    ev += "\r\n";
+    ev += F("\r\n");
   }
 
   if (message != nullptr) {
@@ -54,9 +54,9 @@ static String generateEventMessage(const char* message, const char* event, uint3
         if (ldata != nullptr) {
           memcpy(ldata.get(), lineStart, llen);
           ldata[llen] = 0;
-          ev += "data: ";
+          ev += F("data: ");
           ev += ldata.get();
-          ev += "\r\n\r\n";
+          ev += F("\r\n\r\n");
         }
         lineStart = (message + messageLen);
       } else {
@@ -88,13 +88,13 @@ static String generateEventMessage(const char* message, const char* event, uint3
         if (ldata != nullptr) {
           memcpy(ldata.get(), lineStart, llen);
           ldata[llen] = 0;
-          ev += "data: ";
+          ev += F("data: ");
           ev += ldata.get();
-          ev += "\r\n";
+          ev += F("\r\n");
         }
         lineStart = nextLine;
         if (lineStart == (message + messageLen))
-          ev += "\r\n";
+          ev += F("\r\n");
       }
     } while (lineStart < (message + messageLen));
   }
@@ -234,8 +234,7 @@ void AsyncEventSourceClient::_runQueue(){
 
   for(auto i = _messageQueue.begin(); i != _messageQueue.end(); ++i)
   {
-    //if(!(*i)->sent()) fix crush
-    if(*i && !(*i)->sent())
+    if(!(*i)->sent())
       (*i)->send(_client);
   }
 }
@@ -327,8 +326,10 @@ bool AsyncEventSource::canHandle(AsyncWebServerRequest *request){
 
 void AsyncEventSource::handleRequest(AsyncWebServerRequest *request){
   if(!_semaphore){
+#ifdef INCLUDE_AUTHENTICATION    
   if((_username != "" && _password != "") && !request->authenticate(_username.c_str(), _password.c_str()))
     return request->requestAuthentication();
+#endif
   request->send(new AsyncEventSourceResponse(this));
   }
 }
@@ -338,7 +339,7 @@ void AsyncEventSource::handleRequest(AsyncWebServerRequest *request){
 AsyncEventSourceResponse::AsyncEventSourceResponse(AsyncEventSource *server){
   _server = server;
   _code = 200;
-  _contentType = "text/event-stream";
+  _contentType = F("text/event-stream");
   _sendContentLength = false;
   addHeader(F("Cache-Control"), F("no-cache"));
   addHeader(F("Connection"),F("keep-alive"));
