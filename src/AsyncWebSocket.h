@@ -20,6 +20,7 @@
 */
 #ifndef ASYNCWEBSOCKET_H_
 #define ASYNCWEBSOCKET_H_
+#ifdef INCLUDE_WEBSOCKET
 
 #include <Arduino.h>
 #ifdef ESP32
@@ -328,5 +329,5 @@ class AsyncWebSocketResponse: public AsyncWebServerResponse {
     bool _sourceValid() const { return true; }
 };
 
-
+#endif
 #endif /* ASYNCWEBSOCKET_H_ */
