@@ -106,7 +106,7 @@ public:
         if (!request->contentType().equalsIgnoreCase(JSON_MIMETYPE))
             return false;
 
-        request->addInterestingHeader("ANY");
+        request->addInterestingHeader(F("ANY"));
         return true;
     }
 
@@ -206,7 +206,7 @@ public:
         if (!request->contentType().equalsIgnoreCase(JSON_MIMETYPE))
             return false;
 
-        request->addInterestingHeader("ANY");
+        request->addInterestingHeader(F("ANY"));
         return true;
     }
 
