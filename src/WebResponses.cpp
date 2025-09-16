@@ -133,23 +133,20 @@ String AsyncWebServerResponse::_assembleHead(uint8_t version){
   int bufSize = 300;
   char buf[bufSize];
 
-  static const char _http[] PROGMEM = "HTTP/1.%d %d %s\r\n";
-  snprintf(buf, bufSize, reinterpret_cast<const char*>(_http), version, _code, _responseCodeToString(_code));
+  snprintf_P(buf, bufSize, PSTR("HTTP/1.%d %d %s\r\n"), version, _code, _responseCodeToString(_code));
   out.concat(buf);
 
   if(_sendContentLength) {
-    static const char _cnt[] PROGMEM = "Content-Length: %d\r\n";
-    snprintf(buf, bufSize, reinterpret_cast<const char*>(_cnt), _contentLength);
+    snprintf(buf, bufSize, PSTR("Content-Length: %d\r\n"), _contentLength);
     out.concat(buf);
   }
   if(_contentType.length()) {
-    static const char _cnt[] PROGMEM = "Content-Type: %s\r\n";
-    snprintf(buf, bufSize, reinterpret_cast<const char*>(_cnt), _contentType.c_str());
+    snprintf(buf, bufSize, PSTR("Content-Type: %s\r\n"), _contentType.c_str());
     out.concat(buf);
   }
 
   for(const auto& header: _headers){
-    snprintf(buf, bufSize, "%s: %s\r\n", header->name().c_str(), header->value().c_str());
+    snprintf_P(buf, bufSize, PSTR("%s: %s\r\n"), header->name().c_str(), header->value().c_str());
     out.concat(buf);
   }
   _headers.free();
@@ -397,7 +394,7 @@ size_t AsyncAbstractResponse::_fillBufferAndProcessTemplates(uint8_t* data, size
     // If closing placeholder is found:
     if(pTemplateEnd) {
       // prepare argument to callback
-      const size_t paramNameLength = std::min(sizeof(buf) - 1, (unsigned int)(pTemplateEnd - pTemplateStart - 1));
+      const size_t paramNameLength = std::min((size_t)(sizeof(buf) - 1), (size_t)(pTemplateEnd - pTemplateStart - 1));
       if(paramNameLength) {
         memcpy(buf, pTemplateStart + 1, paramNameLength);
         buf[paramNameLength] = 0;
@@ -530,10 +527,10 @@ AsyncFileResponse::AsyncFileResponse(FS &fs, const String& path, const String& c
 
   if(download) {
     // set filename and force download
-    snprintf(buf, sizeof (buf), "attachment; filename=\"%s\"", filename);
+    snprintf_P(buf, sizeof (buf), PSTR("attachment; filename=\"%s\""), filename);
   } else {
     // set filename and force rendering
-    snprintf(buf, sizeof (buf), "inline; filename=\"%s\"", filename);
+    snprintf_P(buf, sizeof (buf),PSTR("inline; filename=\"%s\""), filename);
   }
   addHeader(F("Content-Disposition"), buf);
 }
@@ -562,9 +559,9 @@ AsyncFileResponse::AsyncFileResponse(File content, const String& path, const Str
   char* filename = (char*)path.c_str() + filenameStart;
 
   if(download) {
-    snprintf(buf, sizeof (buf), "attachment; filename=\"%s\"", filename);
+    snprintf_P(buf, sizeof (buf), PSTR("attachment; filename=\"%s\""), filename);
   } else {
-    snprintf(buf, sizeof (buf), "inline; filename=\"%s\"", filename);
+    snprintf_P(buf, sizeof (buf), PSTR("inline; filename=\"%s\""), filename);
   }
   addHeader(F("Content-Disposition"), buf);
 }
