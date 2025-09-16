@@ -21,6 +21,7 @@
 
 #ifndef WEB_AUTHENTICATION_H_
 #define WEB_AUTHENTICATION_H_
+#ifdef INCLUDE_AUTHENTICATION
 
 #include "Arduino.h"
 
@@ -31,4 +32,5 @@ bool checkDigestAuthentication(const char * header, const char * method, const c
 //for storing hashed versions on the device that can be authenticated against
 String generateDigestHash(const char * username, const char * password, const char * realm);
 
+#endif
 #endif
