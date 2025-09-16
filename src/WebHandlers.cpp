@@ -62,11 +62,17 @@ AsyncStaticWebHandler& AsyncStaticWebHandler::setLastModified(const char* last_m
   return *this;
 }
 
+//AsyncStaticWebHandler& AsyncStaticWebHandler::setLastModified(struct tm* last_modified){
+//  char result[30];
+//  strftime (result,30,"%a, %d %b %Y %H:%M:%S %Z", last_modified);
+//  return setLastModified((const char *)result);
+//}
 AsyncStaticWebHandler& AsyncStaticWebHandler::setLastModified(struct tm* last_modified){
   char result[30];
-  strftime (result,30,"%a, %d %b %Y %H:%M:%S %Z", last_modified);
+  strftime(result, sizeof(result), PSTR("%a, %d %b %Y %H:%M:%S GMT"), last_modified);
   return setLastModified((const char *)result);
 }
+
 
 #ifdef ESP8266
 AsyncStaticWebHandler& AsyncStaticWebHandler::setLastModified(time_t last_modified){
@@ -163,7 +169,7 @@ bool AsyncStaticWebHandler::_fileExists(AsyncWebServerRequest *request, const St
     // Extract the file name from the path and keep it in _tempObject
     size_t pathLen = path.length();
     char * _tempPath = (char*)malloc(pathLen+1);
-    snprintf(_tempPath, pathLen+1, "%s", path.c_str());
+    snprintf_P(_tempPath, pathLen+1, PSTR("%s"), path.c_str());
     request->_tempObject = (void*)_tempPath;
 
     // Calculate gzip statistic
@@ -190,15 +196,15 @@ void AsyncStaticWebHandler::handleRequest(AsyncWebServerRequest *request)
   String filename = String((char*)request->_tempObject);
   free(request->_tempObject);
   request->_tempObject = NULL;
-  if((_username != "" && _password != "") && !request->authenticate(_username.c_str(), _password.c_str()))
-      return request->requestAuthentication();
+  //if((_username != "" && _password != "") && !request->authenticate(_username.c_str(), _password.c_str()))
+  //    return request->requestAuthentication();
 
   if (request->_tempFile == true) {
     String etag = String(request->_tempFile.size());
     if (_last_modified.length() && _last_modified == request->header(F("If-Modified-Since"))) {
       request->_tempFile.close();
       request->send(304); // Not modified
-    } else if (_cache_control.length() && request->hasHeader(F("If-None-Match")) && request->header("If-None-Match").equals(etag)) {
+    } else if (_cache_control.length() && request->hasHeader(F("If-None-Match")) && request->header(F("If-None-Match")).equals(etag)) {
       request->_tempFile.close();
       AsyncWebServerResponse * response = new AsyncBasicResponse(304); // Not modified
       response->addHeader(F("Cache-Control"), _cache_control);
