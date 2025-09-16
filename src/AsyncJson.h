@@ -12,28 +12,9 @@ constexpr const char* JSON_MIMETYPE = "application/json";
 #define CHUNK_OBJ_SIZE 768
 #endif
 
-class Move {
-public:
-    const char* str;
-    gson::Parser parser;
-
-    Move() : str(nullptr), parser() {}
-
-    // Move constructor
-    Move(Move&& p) noexcept : str(p.str), parser(std::move(p.parser)) {
-        p.str = nullptr;
-    }
-
-    // Move assignment operator
-    Move& operator=(Move&& p) noexcept {
-        if (this != &p) {
-            str = p.str;
-            parser = std::move(p.parser);
-            p.str = nullptr;
-        }
-        return *this;
-    }
-};
+#ifndef CHUNK_PROCESS_PERIOD_MS
+#define CHUNK_PROCESS_PERIOD_MS 3
+#endif
 
 class ChunkPrint : public Print {
 private:
@@ -91,7 +72,7 @@ public:
 };
 
 typedef std::function<void(AsyncWebServerRequest *request, gson::Entry &json)> ArJsonRequestHandlerFunction;
-typedef std::function<void(AsyncWebServerRequest *request, gson::string &json)> ArJsonRequestHandlerFunction2;
+typedef std::function<void(AsyncWebServerRequest *request, gson::string &json)> JsonStreamRequestHandler;
 
 class AsyncCallbackJsonWebHandler : public AsyncWebHandler {
 private:
@@ -146,11 +127,11 @@ public:
     virtual bool isRequestHandlerTrivial() override final { return _onRequest ? false : true; }
 };
 
-class AsyncCallbackJsonWebHandler2 : public AsyncWebHandler {
+class AsyncJsonStreamCallback : public AsyncWebHandler {
 private:
     const String _uri;
     WebRequestMethodComposite _method;
-    ArJsonRequestHandlerFunction2 _onRequest2;
+    JsonStreamRequestHandler _onJsonStreamRequest;
 
     size_t _contentLength;
     size_t _maxContentLength;
@@ -159,7 +140,7 @@ private:
 
     AsyncWebServerRequest* _request;
     size_t _index;
-    Ticker _ticker;
+    Ticker _nextChunkTimer;
 
     void processNextChunk() {
 
@@ -173,12 +154,12 @@ private:
             // Create a gson::string to hold the raw JSON data chunk
             gson::string rawJson;
             rawJson.addTextRaw(chunkObject.get(), chunkLen);
-            // Call the _onRequest2 handler with the chunk
-            _onRequest2(_request, rawJson);
+            // Call the _onJsonStreamRequest handler with the chunk
+            _onJsonStreamRequest(_request, rawJson);
             // Move to the next chunk
             _index += chunkLen;
             // Schedule the next chunk processing
-            _ticker.once_ms(5, [this]() {this->processNextChunk();});
+            _nextChunkTimer.once_ms(CHUNK_PROCESS_PERIOD_MS, [this]() {this->processNextChunk();});
         } else {
             // Reset tempObject pointer to release the memory
             _tempObject = nullptr;
@@ -193,8 +174,8 @@ private:
         // Create a gson::string to hold the raw JSON data
         gson::string rawJson;
         rawJson.addTextRaw(fullObject.get(), _tempObjectSize);
-        // Call the _onRequest2 handler with the full object
-        _onRequest2(_request, rawJson);
+        // Call the _onJsonStreamRequest handler with the full object
+        _onJsonStreamRequest(_request, rawJson);
         // Reset tempObject pointer to release the memory
         _tempObject = nullptr;
         _tempObjectSize = 0;
@@ -205,15 +186,15 @@ private:
     }
 
 public:
-    AsyncCallbackJsonWebHandler2(const String& uri, ArJsonRequestHandlerFunction2 onRequest) 
-        : _uri(uri), _method(HTTP_POST | HTTP_PUT | HTTP_PATCH), _onRequest2(onRequest), _maxContentLength(16384), _tempObject(nullptr), _tempObjectSize(0) {}
+    AsyncJsonStreamCallback(const String& uri, JsonStreamRequestHandler onRequest) 
+        : _uri(uri), _method(HTTP_POST | HTTP_PUT | HTTP_PATCH), _onJsonStreamRequest(onRequest), _maxContentLength(16384), _tempObject(nullptr), _tempObjectSize(0) {}
     
     void setMethod(WebRequestMethodComposite method) { _method = method; }
     void setMaxContentLength(int maxContentLength) { _maxContentLength = maxContentLength; }
-    void onRequest2(ArJsonRequestHandlerFunction2 fn) { _onRequest2 = fn; }
+    void onRequest2(JsonStreamRequestHandler fn) { _onJsonStreamRequest = fn; }
 
     virtual bool canHandle(AsyncWebServerRequest *request) override final {
-        if (!_onRequest2)
+        if (!_onJsonStreamRequest)
             return false;
 
         if (!(_method & request->method()))
@@ -230,7 +211,7 @@ public:
     }
 
     virtual void handleRequest(AsyncWebServerRequest *request) override final {
-        if (_onRequest2) {
+        if (_onJsonStreamRequest) {
             if (_tempObject != nullptr && _tempObjectSize > 0) {
                 _request = request;
                 _index = 0;
@@ -248,7 +229,7 @@ public:
     virtual void handleUpload(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) override final {}
 
     virtual void handleBody(AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) override final {
-        if (_onRequest2) {
+        if (_onJsonStreamRequest) {
             _contentLength = total;
             if (total > 0 && _tempObject == nullptr && total < _maxContentLength) {
                 _tempObject = malloc(total);
@@ -260,5 +241,5 @@ public:
         }
     }
 
-    virtual bool isRequestHandlerTrivial() override final { return _onRequest2 ? false : true; }
+    virtual bool isRequestHandlerTrivial() override final { return _onJsonStreamRequest ? false : true; }
 };
