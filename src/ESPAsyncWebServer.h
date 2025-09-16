@@ -113,7 +113,17 @@ class AsyncWebHeader {
     ~AsyncWebHeader(){}
     const String& name() const { return _name; }
     const String& value() const { return _value; }
-    String toString() const { return String(_name+": "+_value+"\r\n"); }
+    //String toString() const { return String(_name+": "+_value+"\r\n"); }
+    String toString() const {
+          String out;
+          out.reserve(_name.length() + _value.length() + 4); // reserve space to reduce reallocations
+          out += _name;
+          out += F(": ");
+          out += _value;
+          out += F("\r\n");
+      return out;
+    }
+
 };
 
 /*
@@ -215,9 +225,9 @@ class AsyncWebServerRequest {
     //hash is the string representation of:
     // base64(user:pass) for basic or
     // user:realm:md5(user:realm:pass) for digest
-    bool authenticate(const char * hash);
-    bool authenticate(const char * username, const char * password, const char * realm = NULL, bool passwordIsHash = false);
-    void requestAuthentication(const char * realm = NULL, bool isDigest = true);
+    //bool authenticate(const char * hash);
+    //bool authenticate(const char * username, const char * password, const char * realm = NULL, bool passwordIsHash = false);
+    //void requestAuthentication(const char * realm = NULL, bool isDigest = true);
 
     void setHandler(AsyncWebHandler *handler){ _handler = handler; }
     void addInterestingHeader(const String& name);
@@ -454,7 +464,9 @@ public:
 
 #include "WebResponseImpl.h"
 #include "WebHandlerImpl.h"
+#ifdef INCLUDE_WEBSOCKET
 #include "AsyncWebSocket.h"
+#endif
 #include "AsyncEventSource.h"
 
 #endif /* _AsyncWebServer_H_ */
