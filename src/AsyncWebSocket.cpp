@@ -18,6 +18,7 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#ifdef INCLUDE_WEBSOCKET
 #include "Arduino.h"
 #include "AsyncWebSocket.h"
 
@@ -834,12 +835,7 @@ void AsyncWebSocketClient::binary(AsyncWebSocketMessageBuffer * buffer)
 
 IPAddress AsyncWebSocketClient::remoteIP() {
     if(!_client) {
-#ifdef ESP8266      
-      return IPAddress(0U);
-#else
-      //return IPAddress("0.0.0.0");
-      return IPAddress((uint8_t)0);
-#endif      
+        return IPAddress(0UL);
     }
     return _client->remoteIP();
 }
@@ -1285,3 +1281,4 @@ size_t AsyncWebSocketResponse::_ack(AsyncWebServerRequest *request, size_t len, 
   }
   return 0;
 }
+#endif
