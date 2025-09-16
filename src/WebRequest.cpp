@@ -22,6 +22,7 @@
 #include "WebResponseImpl.h"
 #include "WebAuthentication.h"
 
+
 #ifndef ESP8266
 #define os_strlen strlen
 #endif
@@ -141,7 +142,7 @@ void AsyncWebServerRequest::_onData(void *buf, size_t len){
           _parsedLength += len;
     } else {
       if(_parsedLength == 0){
-        if(_contentType.startsWith("application/x-www-form-urlencoded")){
+        if(_contentType.startsWith(F("application/x-www-form-urlencoded"))){
           _isPlainPost = true;
         } else if(_contentType == "text/plain" && __is_param_char(((char*)buf)[0])){
           size_t i = 0;
@@ -177,7 +178,7 @@ void AsyncWebServerRequest::_onData(void *buf, size_t len){
 }
 
 void AsyncWebServerRequest::_removeNotInterestingHeaders(){
-  if (_interestingHeaders.containsIgnoreCase("ANY")) return; // nothing to do
+  if (_interestingHeaders.containsIgnoreCase(F("ANY"))) return; // nothing to do
   for(const auto& header: _headers){
       if(!_interestingHeaders.containsIgnoreCase(header->name().c_str())){
         _headers.remove(header);
@@ -243,44 +244,43 @@ void AsyncWebServerRequest::_addGetParams(const String& params){
     start = end + 1;
   }
 }
-
-bool AsyncWebServerRequest::_parseReqHead(){
-  // Split the head into method, url and version
+bool AsyncWebServerRequest::_parseReqHead() {
+  // Find method (first word before space)
   int index = _temp.indexOf(' ');
-  String m = _temp.substring(0, index);
-  index = _temp.indexOf(' ', index+1);
-  String u = _temp.substring(m.length()+1, index);
-  _temp = _temp.substring(index+1);
+  if (index < 0) return false;
+  
+  String m = _temp.substring(0, index);  // still uses String here
+  int index2 = _temp.indexOf(' ', index + 1);
+  if (index2 < 0) return false;
 
-  if(m == "GET"){
-    _method = HTTP_GET;
-  } else if(m == "POST"){
-    _method = HTTP_POST;
-  } else if(m == "DELETE"){
-    _method = HTTP_DELETE;
-  } else if(m == "PUT"){
-    _method = HTTP_PUT;
-  } else if(m == "PATCH"){
-    _method = HTTP_PATCH;
-  } else if(m == "HEAD"){
-    _method = HTTP_HEAD;
-  } else if(m == "OPTIONS"){
-    _method = HTTP_OPTIONS;
+  String u = _temp.substring(index + 1, index2);
+  _temp = _temp.substring(index2 + 1);
+
+  // Match method (using PROGMEM strings to save RAM)
+  if (m.equals(F("GET")))         _method = HTTP_GET;
+  else if (m.equals(F("POST")))   _method = HTTP_POST;
+  else if (m.equals(F("DELETE"))) _method = HTTP_DELETE;
+  else if (m.equals(F("PUT")))    _method = HTTP_PUT;
+  else if (m.equals(F("PATCH")))  _method = HTTP_PATCH;
+  else if (m.equals(F("HEAD")))   _method = HTTP_HEAD;
+  else if (m.equals(F("OPTIONS")))_method = HTTP_OPTIONS;
+  else _method = HTTP_ANY;
+
+  // Extract query params
+  String g;
+  int qIndex = u.indexOf('?');
+  if (qIndex > 0) {
+    g = u.substring(qIndex + 1);
+    u = u.substring(0, qIndex);
   }
 
-  String g = String();
-  index = u.indexOf('?');
-  if(index > 0){
-    g = u.substring(index +1);
-    u = u.substring(0, index);
-  }
   _url = urlDecode(u);
   _addGetParams(g);
 
-  if(!_temp.startsWith("HTTP/1.0"))
+  if (!_temp.startsWith(F("HTTP/1.0")))
     _version = 1;
 
-  _temp = String();
+  _temp = String();  // free memory
   return true;
 }
 
@@ -307,10 +307,10 @@ bool AsyncWebServerRequest::_parseReqHeader(){
   if(index){
     String name = _temp.substring(0, index);
     String value = _temp.substring(index + 2);
-    if(name.equalsIgnoreCase("Host")){
+    if(name.equalsIgnoreCase(F("Host"))){
       _host = value;
-    } else if(name.equalsIgnoreCase("Content-Type")){
-      if (value.startsWith("multipart/")){
+    } else if(name.equalsIgnoreCase(F("Content-Type"))){
+      if (value.startsWith(F("multipart/"))){
         _boundary = value.substring(value.indexOf('=')+1);
         _boundary.replace("\"","");
         _contentType = value.substring(0, value.indexOf(';'));
@@ -318,23 +318,23 @@ bool AsyncWebServerRequest::_parseReqHeader(){
       } else {
         _contentType = value;
       }
-    } else if(name.equalsIgnoreCase("Content-Length")){
+    } else if(name.equalsIgnoreCase(F("Content-Length"))){
       _contentLength = atoi(value.c_str());
-    } else if(name.equalsIgnoreCase("Expect") && value == "100-continue"){
+    } else if(name.equalsIgnoreCase(F("Expect")) && value == F("100-continue")){
       _expectingContinue = true;
-    } else if(name.equalsIgnoreCase("Authorization")){
-      if(value.length() > 5 && value.substring(0,5).equalsIgnoreCase("Basic")){
+    } else if(name.equalsIgnoreCase(F("Authorization"))){
+      if(value.length() > 5 && value.substring(0,5).equalsIgnoreCase(F("Basic"))){
         _authorization = value.substring(6);
-      } else if(value.length() > 6 && value.substring(0,6).equalsIgnoreCase("Digest")){
+      } else if(value.length() > 6 && value.substring(0,6).equalsIgnoreCase(F("Digest"))){
         _isDigest = true;
         _authorization = value.substring(7);
       }
     } else {
-      if(name.equalsIgnoreCase("Upgrade") && value.equalsIgnoreCase("websocket")){
+      if(name.equalsIgnoreCase(F("Upgrade")) && value.equalsIgnoreCase(F("websocket"))){
         // WebSocket request can be uniquely identified by header: [Upgrade: websocket]
         _reqconntype = RCT_WS;
       } else {
-        if(name.equalsIgnoreCase("Accept") && strContains(value, "text/event-stream", false)){
+        if(name.equalsIgnoreCase(F("Accept")) && strContains(value, F("text/event-stream"), false)){
           // WebEvent request can be uniquely identified by header:  [Accept: text/event-stream]
           _reqconntype = RCT_EVENT;
         }
@@ -350,7 +350,7 @@ void AsyncWebServerRequest::_parsePlainPostChar(uint8_t data){
   if(data && (char)data != '&')
     _temp += (char)data;
   if(!data || (char)data == '&' || _parsedLength == _contentLength){
-    String name = "body";
+    String name = F("body");
     String value = _temp;
     if(!_temp.startsWith("{") && !_temp.startsWith("[") && _temp.indexOf('=') > 0){
       name = _temp.substring(0, _temp.indexOf('='));
@@ -426,10 +426,10 @@ void AsyncWebServerRequest::_parseMultipartPostByte(uint8_t data, bool last){
        _temp += (char)data;
     if((char)data == '\n'){
       if(_temp.length()){
-        if(_temp.length() > 12 && _temp.substring(0, 12).equalsIgnoreCase("Content-Type")){
+        if(_temp.length() > 12 && _temp.substring(0, 12).equalsIgnoreCase(F("Content-Type"))){
           _itemType = _temp.substring(14);
           _itemIsFile = true;
-        } else if(_temp.length() > 19 && _temp.substring(0, 19).equalsIgnoreCase("Content-Disposition")){
+        } else if(_temp.length() > 19 && _temp.substring(0, 19).equalsIgnoreCase(F("Content-Disposition"))){
           _temp = _temp.substring(_temp.indexOf(';') + 2);
           while(_temp.indexOf(';') > 0){
             String name = _temp.substring(0, _temp.indexOf('='));
@@ -804,7 +804,7 @@ void AsyncWebServerRequest::redirect(const String& url){
   response->addHeader("Location",url);
   send(response);
 }
-
+#ifdef INCLUDE_AUTHENTICATION
 bool AsyncWebServerRequest::authenticate(const char * username, const char * password, const char * realm, bool passwordIsHash){
   if(_authorization.length()){
     if(_isDigest)
@@ -855,7 +855,7 @@ void AsyncWebServerRequest::requestAuthentication(const char * realm, bool isDig
   }
   send(r);
 }
-
+#endif
 bool AsyncWebServerRequest::hasArg(const char* name) const {
   for(const auto& arg: _params){
     if(arg->name() == name){
@@ -967,25 +967,25 @@ String AsyncWebServerRequest::urlDecode(const String& text) const {
 
 
 const char * AsyncWebServerRequest::methodToString() const {
-  if(_method == HTTP_ANY) return "ANY";
-  else if(_method & HTTP_GET) return "GET";
-  else if(_method & HTTP_POST) return "POST";
-  else if(_method & HTTP_DELETE) return "DELETE";
-  else if(_method & HTTP_PUT) return "PUT";
-  else if(_method & HTTP_PATCH) return "PATCH";
-  else if(_method & HTTP_HEAD) return "HEAD";
-  else if(_method & HTTP_OPTIONS) return "OPTIONS";
-  return "UNKNOWN";
+  if (_method == HTTP_ANY) return PSTR("ANY");
+  else if (_method & HTTP_GET) return PSTR("GET");
+  else if (_method & HTTP_POST) return PSTR("POST");
+  else if (_method & HTTP_DELETE) return PSTR("DELETE");
+  else if (_method & HTTP_PUT) return PSTR("PUT");
+  else if (_method & HTTP_PATCH) return PSTR("PATCH");
+  else if (_method & HTTP_HEAD) return PSTR("HEAD");
+  else if (_method & HTTP_OPTIONS) return PSTR("OPTIONS");
+  return PSTR("UNKNOWN");
 }
 
-const char *AsyncWebServerRequest::requestedConnTypeToString() const {
+const char * AsyncWebServerRequest::requestedConnTypeToString() const {
   switch (_reqconntype) {
-    case RCT_NOT_USED: return "RCT_NOT_USED";
-    case RCT_DEFAULT:  return "RCT_DEFAULT";
-    case RCT_HTTP:     return "RCT_HTTP";
-    case RCT_WS:       return "RCT_WS";
-    case RCT_EVENT:    return "RCT_EVENT";
-    default:           return "ERROR";
+    case RCT_NOT_USED: return PSTR("RCT_NOT_USED");
+    case RCT_DEFAULT:  return PSTR("RCT_DEFAULT");
+    case RCT_HTTP:     return PSTR("RCT_HTTP");
+    case RCT_WS:       return PSTR("RCT_WS");
+    case RCT_EVENT:    return PSTR("RCT_EVENT");
+    default:           return PSTR("ERROR");
   }
 }
 
